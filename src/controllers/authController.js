@@ -11,8 +11,8 @@ const phoneUtil = PhoneNumberUtil.getInstance();
 const { redisClient } = require('../config/redisConfig');
 const Client = require('../models/users/Client');
 const Admins = require('../models/users/Admin');
-const Developer = require('../models/users/Developer');
-const ProjectManager = require('../models/users/ProjectManager');
+const Developer = require('../models/users/AssociateUser');
+const ProjectManager = require('../models/users/subAdmin');
 
 const { roles } = require('../utils/types');
 const { registerUserSchema, userCreateSchema } = require('../utils/joi/userValidation');

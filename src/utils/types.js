@@ -1,8 +1,7 @@
 const roles = {
   ADMIN: 'admin',
-  PROJECT_MANAGER: 'projectManager',
-  DEVELOPER: 'developer',
-  CLIENT: 'client',
+  SUBADMIN: 'subAdmin',
+  ASSOCIATE_USER: 'associateUser'
 };
 
 module.exports = {

@@ -15,10 +15,10 @@ router.get('/stats', restrictTo([roles.ADMIN]), getDashboardStats);
 router.patch('/status/:id', restrictTo([roles.ADMIN]), updateStatus);
 
 router.route('/')
-  .get(restrictTo([roles.ADMIN, roles.PROJECT_MANAGER, roles.DEVELOPER]), getUsers)
+  .get(restrictTo([roles.ADMIN, roles.SUBADMIN, roles.ASSOCIATE_USER]), getUsers)
   .post(restrictTo([roles.ADMIN]), createUser);
 
-router.get('/names', restrictTo([roles.ADMIN,roles.PROJECT_MANAGER]), getUsersName);
+router.get('/names', restrictTo([roles.ADMIN, roles.SUBADMIN]), getUsersName);
 router.route('/:id')
   .get(restrictTo([roles.ADMIN]), getUser)
   .patch(restrictTo([roles.ADMIN]), updateUser)

@@ -48,7 +48,7 @@ const userSchema = new Schema(
     },
     role: {
       type: String,
-      enum: [roles.ADMIN, roles.CLIENT, roles.DEVELOPER, roles.PROJECT_MANAGER],
+      enum: [roles.ADMIN, roles.ASSOCIATE_USER, roles.SUBADMIN],
       required: true
     },
 

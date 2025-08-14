@@ -31,7 +31,24 @@ const createUser = catchAsync(async (req, res, next) => {
 
   const existing = await User.findOne({ email: req.body.email });
   if (existing) return next(new AppError('Email already registered.', 400));
-
+  await new Email(req.body.email, 'Welcome to Project Management System!').sendHtmlEmail(
+    'Welcome!',
+    `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2>Welcome to Project Management System!</h2>
+      <p>Dear ${req.body.firstName},</p>
+      <p>Your account has been created successfully. Here are your login credentials:</p>
+      <div style="background-color: #f5f5f5; padding: 15px; border-radius: 5px; margin: 20px 0;">
+        <p><strong>System URL:</strong> <a href="${process.env.FRONTEND_URL}">${process.env.FRONTEND_URL}</a></p>
+        <p><strong>Email:</strong> ${req.body.email}</p>
+        <p><strong>Password:</strong> ${req.body.password}</p>
+      </div>
+      <p>Please change your password after your first login.</p>
+      <p>Best regards,<br>Project Management System Team</p>
+    </div>
+    `,
+    { user: req.body }
+  );
   const user = await User.create(req.body);
   return res.status(201).json({ status: 'success', data: user });
 });
@@ -73,6 +90,7 @@ const getUsers = catchAsync(async (req, res, next) => {
   const [total, users] = await Promise.all([
     User.countDocuments(match),
     User.find(match)
+      .populate('roleId', 'name')
       .skip(skip)
       .limit(Number(limit))
       .sort({ createdAt: -1 })
