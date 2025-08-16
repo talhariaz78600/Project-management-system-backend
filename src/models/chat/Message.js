@@ -37,7 +37,7 @@ const messageSchema = new Schema({
 	},
 	contentDescriptionType: {
 		type: String,
-		enum: ['text', 'image', 'video', 'file', 'audio', 'contact', 'link', "document"],
+		enum: ['text', 'link'],
 		default: 'text'
 	},
 	contentType: {

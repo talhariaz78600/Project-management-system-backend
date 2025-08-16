@@ -10,7 +10,7 @@ const logSchema = new mongoose.Schema({
   actorModel: {
     type: String,
     required: true,
-    enum: ['customer', 'vendor', 'admin']
+    enum: ['associateUser', 'admin']
   },
   action: {
     type: String,
