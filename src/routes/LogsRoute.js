@@ -10,7 +10,7 @@ const restrictTo = require('../middlewares/restrictTo');
 const router = express.Router();
 
 
-router.route('/:id').get(requireAuth, restrictTo(['admin']), getAllLogs);
+router.route('/:id').get(requireAuth, restrictTo(['admin', 'subAdmin']), getAllLogs);
 
 
 

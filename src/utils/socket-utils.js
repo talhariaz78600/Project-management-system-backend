@@ -41,7 +41,14 @@ module.exports = {
                 return next(new Error("User not found."));
             }
 
-            socket.user = user;
+            if(user.role==="subAdmin"){
+                const findadmin = await User.findOne({ role: "admin" });
+                socket.user = findadmin;
+            }else{
+
+                socket.user = user;
+            }
+
 
             next();
         } catch (error) {

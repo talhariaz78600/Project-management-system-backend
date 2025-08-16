@@ -20,24 +20,24 @@ const router = express.Router();
 
 router.use(requireAuth);
 
-router.post('/', restrictTo(roles.ADMIN), createProject);
+router.post('/', restrictTo([roles.ADMIN, roles.SUBADMIN]), createProject);
 
-router.patch('/:id', restrictTo(roles.ADMIN), updateProject);
+router.patch('/:id', restrictTo([roles.ADMIN, roles.SUBADMIN]), updateProject);
 
-router.delete('/:id', restrictTo(roles.ADMIN), deleteProject);
+router.delete('/:id', restrictTo([roles.ADMIN, roles.SUBADMIN]), deleteProject);
 
-router.patch('/task/:id/assign-tasks', restrictTo(roles.ADMIN), assignTasks);
+router.patch('/task/:id/assign-tasks', restrictTo([roles.ADMIN, roles.SUBADMIN]), assignTasks);
 
-router.patch('/:id/status', restrictTo([roles.ADMIN, roles.PROJECT_MANAGER]), updateProjectStatus);
+router.patch('/:id/status', restrictTo([roles.ADMIN, roles.SUBADMIN]), updateProjectStatus);
 
-router.get('/', restrictTo([roles.ADMIN]), getAllProjects);
+router.get('/', restrictTo([roles.ADMIN, roles.SUBADMIN]), getAllProjects);
 
-router.get('/:id', getProject);
+router.get('/:id', restrictTo([roles.ADMIN, roles.SUBADMIN]), getProject);
 
-router.get('/analytics/data', restrictTo([roles.ADMIN]), getProjectAnalytics);
+router.get('/analytics/data', restrictTo([roles.ADMIN, roles.SUBADMIN]), getProjectAnalytics);
 
-router.get('/manager/my-projects', restrictTo([roles.PROJECT_MANAGER]), getManagerProjects);
+router.get('/manager/my-projects', restrictTo([roles.PROJECT_MANAGER, roles.SUBADMIN]), getManagerProjects);
 
-router.get('/client/my-projects', restrictTo([roles.CLIENT]), getClientProjects);
+router.get('/client/my-projects', restrictTo([roles.CLIENT, roles.SUBADMIN]), getClientProjects);
 
 module.exports = router;

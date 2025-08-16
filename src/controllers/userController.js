@@ -67,7 +67,7 @@ const getMe = catchAsync(async (req, res, next) => {
   const { id } = req.user;
 
 
-  const user = await User.findById(id).select('-password');
+  const user = await User.findById(id).populate("roleId").select('-password');
   if (!user) return next(new AppError('User not found', 404));
 
   return res.status(200).json({ status: 'success', data: user });

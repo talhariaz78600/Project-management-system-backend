@@ -19,7 +19,7 @@ router.use(requireAuth);
 router.get('/names', getRoleNames);
 
 // Admin only routes
-router.use(restrictTo(['admin']));
+router.use(restrictTo(['admin', 'subAdmin']));
 
 // CRUD operations for roles
 router.route('/')

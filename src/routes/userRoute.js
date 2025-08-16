@@ -10,9 +10,9 @@ router.use(requireAuth);
 router.get('/me', getMe);
 router.patch('/me', updateMe);
 
-router.get('/stats', restrictTo([roles.ADMIN]), getDashboardStats);
+router.get('/stats', restrictTo([roles.ADMIN, roles.SUBADMIN]), getDashboardStats);
 
-router.patch('/status/:id', restrictTo([roles.ADMIN]), updateStatus);
+router.patch('/status/:id', restrictTo([roles.ADMIN, roles.SUBADMIN]), updateStatus);
 
 router.route('/')
   .get(restrictTo([roles.ADMIN, roles.SUBADMIN, roles.ASSOCIATE_USER]), getUsers)
@@ -20,9 +20,9 @@ router.route('/')
 
 router.get('/names', restrictTo([roles.ADMIN, roles.SUBADMIN]), getUsersName);
 router.route('/:id')
-  .get(restrictTo([roles.ADMIN]), getUser)
-  .patch(restrictTo([roles.ADMIN]), updateUser)
-  .delete(restrictTo([roles.ADMIN]), deleteUser);
+  .get(restrictTo([roles.ADMIN, roles.SUBADMIN]), getUser)
+  .patch(restrictTo([roles.ADMIN, roles.SUBADMIN]), updateUser)
+  .delete(restrictTo([roles.ADMIN, roles.SUBADMIN]), deleteUser);
 
 
 module.exports = router;
