@@ -243,7 +243,7 @@ function initializeSocket(server) {
             try {
 
                 let receiverId = data?.receiverId;
-                const senderData = user 
+                const senderData = user
 
                 if (receiverId && typeof receiverId === 'object' && receiverId._id) {
                     receiverId = receiverId._id.toString();
@@ -298,10 +298,10 @@ function initializeSocket(server) {
                         });
 
                     }
-                                                            
+
                     if (!chat) {
                         console.log("No existing chat found. Creating a new one...");
-                                                                                                                    
+
                         chat = await ChatsModel.create({ participants: [userId, receiverId] });
 
                     }
@@ -353,7 +353,7 @@ function initializeSocket(server) {
                     contentType: data?.contentType,
                     contentDescriptionType: data?.contentDescriptionType,
                     userSettings: userSettingsBody,
-              
+
                 }
                 const addMessage = await MessagesModel.create(messageBody);
 
@@ -495,7 +495,7 @@ function initializeSocket(server) {
             try {
 
                 let receiverId = data?.receiverId;
-                const senderData = user 
+                const senderData = user
 
                 if (receiverId && typeof receiverId === 'object' && receiverId._id) {
                     receiverId = receiverId._id.toString();
@@ -550,10 +550,10 @@ function initializeSocket(server) {
                         });
 
                     }
-                                                            
+
                     if (!chat) {
                         console.log("No existing chat found. Creating a new one...");
-                                                                                                                    
+
                         chat = await ChatsModel.create({ participants: [userId, receiverId] });
 
                     }
@@ -596,22 +596,22 @@ function initializeSocket(server) {
                 }
 
 
-         
+
                 const messageEmitBody = {
                     chatScreenBody: {
                         chatId,
                         chatName,
                         chatType: chatDetails?.chatType,
                         receiverId,
-                        latestMessage:  '',
+                        latestMessage: '',
                         latesMessageId: null,
-                        latestMessageType:  'text',
+                        latestMessageType: 'text',
                         contentDescriptionType: 'text',
                         latestMessageSentAt: null,
-                        latestMessageTitle:  '',
-                        fileSize:  '',
-                        latestMessageDescription:  '',
-                        unreadCount: unreadCount,
+                        latestMessageTitle: '',
+                        fileSize: '',
+                        latestMessageDescription: '',
+                        // unreadCount: unreadCount,
 
                     }
                 }
@@ -625,17 +625,15 @@ function initializeSocket(server) {
                     return chatDetails?.participants?.find(participant => participant?._id?.toString?.() != userId.toString?.())?.profilePicture ?? chatDetails?.participants?.find(participant => participant?._id?.toString?.() != userId?.toString?.())?.profilePicture ?? defaultImage;
                 };
 
-                const messageDeliveryStatus = msgDeliveryStatus({ userId, chat: { lastMessage: latestMessageData } }) || {};
-                io.to(userId.toString()).emit('receive-message', {
+                
+                io.to(userId.toString()).emit('get-single-chat', {
                     ...messageEmitBody,
                     chatScreenBody: {
                         ...messageEmitBody.chatScreenBody,
                         unreadCount: 0,
                         chatName: chatNameForUser(chatDetails, userId), // Set chatName for the sender
                         displayPicture: chatProfileForUser(chatDetails, userId), // Set displayPicture for the sender,
-                        ...(Object.keys(messageDeliveryStatus || {})?.length && {
-                            ...messageDeliveryStatus
-                        })
+               
 
                     }
                 });
@@ -654,7 +652,7 @@ function initializeSocket(server) {
                     }
                 }
 
-  
+
 
                 chatDetails.markModified('userSettings');
 

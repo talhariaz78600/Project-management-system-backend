@@ -15,10 +15,9 @@ const projectSchema = new Schema({
     type: String, // URL or path to project documents
     trim: true,
   },
-  clientId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   managerId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+  members: [{ type: Schema.Types.ObjectId, ref: 'User' }],
   progress: { type: Number, default: 0 }, // 0 to 100
-
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date },
 });

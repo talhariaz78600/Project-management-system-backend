@@ -10,7 +10,7 @@ const Task = require('../models/Task');
 const createProject = catchAsync(async (req, res, next) => {
   // Require core project fields dynamically
   const schema = projectSchema.fork(
-    ['title', 'description', 'clientId', 'managerId', 'deadline'],
+    ['title', 'description', 'managerId', 'deadline'],
     s => s.required()
   );
   const { error } = schema.validate(req.body,{
@@ -38,9 +38,8 @@ const getProject = catchAsync(async (req, res, next) => {
   if (!mongoose.Types.ObjectId.isValid(id)) return next(new AppError('Invalid project ID', 400));
 
   const project = await Project.findById(id)
-    .populate('clientId', 'firstName lastName email role')
+    .populate('members', 'firstName lastName email role')
     .populate('managerId', 'firstName lastName email role')
-    .populate('developers', 'firstName lastName email role')
     .populate('tasks');
   if (!project) return next(new AppError('Project not found', 404));
 
@@ -65,12 +64,11 @@ const getAllProjects = catchAsync(async (req, res) => {
     {
       $lookup: {
         from: 'users',
-        localField: 'clientId',
+        localField: 'members',
         foreignField: '_id',
-        as: 'clientId'
+        as: 'members'
       }
     },
-    { $unwind: { path: '$clientId', preserveNullAndEmptyArrays: true } },
     {
       $lookup: {
         from: 'users',

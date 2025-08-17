@@ -10,10 +10,12 @@ const taskSchema = new Schema({
     enum: ['Assigned', 'In Progress', 'Review', 'Completed'],
     default: 'Assigned',
   },
-  priority: { type: String, enum: ['Low', 'Medium', 'High'], default: 'Medium' },
+  priority: { type: String, enum: ['Low', 'Medium', 'High',"Critical"], default: 'Medium' },
   projectId: { type: Schema.Types.ObjectId, ref: 'Project', required: true },
   assignedTo: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   deadline: { type: Date },
+  budget: { type: Number, min: 0 },
+  attachments: [{ type: String }], // URLs or paths to files
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date },
 });

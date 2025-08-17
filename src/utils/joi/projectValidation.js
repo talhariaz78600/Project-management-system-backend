@@ -4,7 +4,7 @@ const projectSchema = Joi.object({
   title: Joi.string().trim(),
   description: Joi.string().trim(),
   status: Joi.string().valid('Pending', 'Ongoing', 'Completed'),
-  clientId: Joi.string().hex().length(24),
+  members: Joi.array().items(Joi.string().hex().length(24)).default([]),
   managerId: Joi.string().hex().length(24),
   tasks: Joi.array().items(Joi.string().hex().length(24)).default([]),
   deadline: Joi.date(),

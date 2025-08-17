@@ -4,10 +4,21 @@ const Project = require('../models/Project');
 const User = require('../models/users/User');
 const AppError = require('../utils/appError');
 const catchAsync = require('../utils/catchAsync');
+const { taskSchemaValidation } = require('../utils/joi/taskValidation');
 
 // Create a new task (Manager only)
 const createTask = catchAsync(async (req, res, next) => {
-  const { title, description, status, priority, projectId, assignedTo, deadline } = req.body;
+  const { title, description, status, priority, projectId, assignedTo, deadline, budget, attachments } = req.body;
+  const { error } = taskSchemaValidation.fork(['title', 'description', 'status', 'priority', 'projectId', 'assignedTo', 'deadline', 'budget'], schema => schema.required()).validate(req.body,{
+    abortEarly: false,
+    allowUnknown: true,
+    stripUnknown: true
+  });
+
+  if (error) {
+    const errorFields = joiError(error);
+    return next(new AppError("Invalid task data", 400, { fieldErrors: errorFields }));
+  }
 
   // Validate project and user existence
   if (!mongoose.Types.ObjectId.isValid(projectId)) return next(new AppError('Invalid project ID', 400));
@@ -27,6 +38,8 @@ const createTask = catchAsync(async (req, res, next) => {
     projectId,
     assignedTo,
     deadline,
+    attachments,
+    budget
   });
 
   res.status(201).json({ status: 'success', data: task });
@@ -46,7 +59,8 @@ const getTasks = catchAsync(async (req, res, next) => {
   const [total, tasks] = await Promise.all([
     Task.countDocuments(filter),
     Task.find(filter)
-      .populate('assignedTo', 'firstName lastName email')
+      .populate('assignedTo', 'profilePicture firstName lastName email')
+      .populate('members', 'profilePicture firstName lastName email')
       .skip(skip)
       .limit(Number(limit))
       .sort({ createdAt: -1 })

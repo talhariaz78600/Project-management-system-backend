@@ -390,11 +390,6 @@ module.exports = {
         try {
             console.log(`fetchUserChats util called with params ${JSON.stringify(params)}`);
             const { userId, pageNo = 1, recordsPerPage = 10, others = false } = params;
-            console.log("others", others)
-            console.log("userId", userId)
-            let a = JSON.parse(others || false) ? false : true
-            const skipDocuments = (pageNo - 1) * recordsPerPage;
-            const documentsLimit = recordsPerPage;
             const userChatIds = await Chats.find(
                 {
                     
@@ -423,7 +418,7 @@ module.exports = {
             console.log("userChatIds", userChatIds)
             let chats = await Chats.find({ _id: { $in: userChatIds } })
                 .populate('participants').populate({ path: 'lastMessage', model: Messages })
-                .sort({ lastMessageSentAt: -1 }).skip(skipDocuments).limit(documentsLimit);
+                .sort({ lastMessageSentAt: -1 })
 
             console.log("these are chats for users", chats)
 
