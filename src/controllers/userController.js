@@ -188,12 +188,11 @@ const getDashboardStats = catchAsync(async (req, res) => {
        {
       $lookup: {
         from: 'users',
-        localField: 'clientId',
+        localField: 'members',
         foreignField: '_id',
-        as: 'clientId'
+        as: 'members'
       }
     },
-    { $unwind: { path: '$clientId', preserveNullAndEmptyArrays: true } },
     {
       $lookup: {
         from: 'users',
@@ -258,7 +257,7 @@ const getDashboardStats = catchAsync(async (req, res) => {
 });
 
 const getUsersName = catchAsync(async (req, res) => {
-  const { role = 'client' } = req.query;
+  const { role = 'associateUser' } = req.query;
   const match = {};
   if (role && Object.values(roles).includes(role)) match.role = role;
 

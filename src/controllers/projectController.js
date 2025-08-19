@@ -38,12 +38,30 @@ const getProject = catchAsync(async (req, res, next) => {
   if (!mongoose.Types.ObjectId.isValid(id)) return next(new AppError('Invalid project ID', 400));
 
   const project = await Project.findById(id)
-    .populate('members', 'firstName lastName email role')
-    .populate('managerId', 'firstName lastName email role')
-    .populate('tasks');
+    .populate('members', 'firstName lastName email role profilePicture')
+    .populate('managerId', 'firstName lastName email role profilePicture')
   if (!project) return next(new AppError('Project not found', 404));
 
   return res.status(200).json({ status: 'success', data: project });
+});
+
+const addMembersToProject = catchAsync(async (req, res, next) => {
+  const { id } = req.params;
+  const { memberIds = [] } = req.body;
+
+  if (!mongoose.Types.ObjectId.isValid(id)) return next(new AppError('Invalid project ID', 400));
+  const project = await Project.findById(id);
+  if (!project) return next(new AppError('Project not found', 404));
+
+  // Add members to project
+  project.members = Array.from(new Set([...project.members.map(String), ...memberIds]));
+  await project.save();
+
+  return res.status(200).json({
+    status: 'success',
+    message: 'Members added successfully',
+    data: project
+  });
 });
 
 // List projects with pagination & filters
@@ -452,6 +470,7 @@ module.exports = {
   getAllProjects,
   updateProject,
   createProject,
-  getClientProjects
+  getClientProjects,
+  addMembersToProject
 
 }

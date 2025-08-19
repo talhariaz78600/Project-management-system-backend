@@ -11,7 +11,8 @@ const {
   getAllProjects,
   updateProject,
   createProject,
-  getClientProjects
+  getClientProjects,
+  addMembersToProject
 } = require('../controllers/projectController');
 
 const { roles } = require('../utils/types');
@@ -39,5 +40,7 @@ router.get('/analytics/data', restrictTo([roles.ADMIN, roles.SUBADMIN]), getProj
 router.get('/manager/my-projects', restrictTo([roles.PROJECT_MANAGER, roles.SUBADMIN]), getManagerProjects);
 
 router.get('/client/my-projects', restrictTo([roles.CLIENT, roles.SUBADMIN]), getClientProjects);
+
+router.patch('/:id/add-members', restrictTo([roles.ADMIN, roles.SUBADMIN]), addMembersToProject);
 
 module.exports = router;

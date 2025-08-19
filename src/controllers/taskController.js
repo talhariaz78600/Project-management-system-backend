@@ -5,6 +5,7 @@ const User = require('../models/users/User');
 const AppError = require('../utils/appError');
 const catchAsync = require('../utils/catchAsync');
 const { taskSchemaValidation } = require('../utils/joi/taskValidation');
+const joiError = require('../utils/joiError');
 
 // Create a new task (Manager only)
 const createTask = catchAsync(async (req, res, next) => {
@@ -47,9 +48,9 @@ const createTask = catchAsync(async (req, res, next) => {
 
 // Get all tasks (Manager: filter by project, assignedTo, status, search, pagination)
 const getTasks = catchAsync(async (req, res, next) => {
-  const {  assignedTo, status, search = '', page = 1, limit = 100 } = req.query;
+  const {  assignedTo, status, search = '' } = req.query;
     const { projectId } = req.params;
-  const skip = (page - 1) * limit;
+ 
   const filter = { projectId };
 
   if (assignedTo && mongoose.Types.ObjectId.isValid(assignedTo)) filter.assignedTo = assignedTo;
@@ -60,10 +61,6 @@ const getTasks = catchAsync(async (req, res, next) => {
     Task.countDocuments(filter),
     Task.find(filter)
       .populate('assignedTo', 'profilePicture firstName lastName email')
-      .populate('members', 'profilePicture firstName lastName email')
-      .skip(skip)
-      .limit(Number(limit))
-      .sort({ createdAt: -1 })
   ]);
 
   res.status(200).json({
@@ -117,7 +114,7 @@ const updateTask = catchAsync(async (req, res, next) => {
   const { id } = req.params;
   if (!mongoose.Types.ObjectId.isValid(id)) return next(new AppError('Invalid task ID', 400));
 
-  const update = { ...req.body, updatedAt: new Date(), status: "Completed" };
+  const update = { ...req.body, updatedAt: new Date() };
   const task = await Task.findByIdAndUpdate(id, update, { new: true, runValidators: true });
   if (!task) return next(new AppError('Task not found', 404));
 
