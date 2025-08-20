@@ -7,7 +7,7 @@ const taskSchema = new Schema({
   description: { type: String },
   status: {
     type: String,
-    enum: ['Assigned', 'In Progress', 'Review', 'Completed', 'Pending'],
+    enum: ['Assigned', 'In Progress', 'Review', 'Completed', 'Pending','Review'],
     default: 'Assigned',
   },
   priority: { type: String, enum: ['Low', 'Medium', 'High', 'Critical'], default: 'Medium' },

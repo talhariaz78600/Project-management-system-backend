@@ -70,7 +70,7 @@ const getTasks = catchAsync(async (req, res, next) => {
     data: tasks
   });
 });
-const getDeveloperTasks = catchAsync(async (req, res, next) => {
+const getTasksbyAssignedUser = catchAsync(async (req, res, next) => {
   const {   status, search = '', page = 1, limit = 100 } = req.query;
     const id=req.user._id;
   const skip = (page - 1) * limit;
@@ -161,6 +161,6 @@ module.exports = {
   getTask,
   updateTask,
   deleteTask,
-  getDeveloperTasks,
+  getTasksbyAssignedUser,
   getDeveloperTaskStats
 };
