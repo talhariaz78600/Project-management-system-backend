@@ -9,8 +9,12 @@ const taskSchemaValidation = Joi.object({
   projectId: Joi.string().hex().length(24),
   priority: Joi.string().valid('Low', 'Medium', 'High', 'Critical').default('Medium'),
   budget: Joi.number().min(0),
+  payment: Joi.object({
+    status: Joi.string().valid('Pending', 'Completed').default('Pending'),
+    screenShot: Joi.string().uri()
+  }),
+  approvedByManager: Joi.boolean().default(false), 
   attachments: Joi.array().items(Joi.string().uri())
 })
-// .fork(['title', 'description', 'status', 'assignedTo', 'deadline', 'projectId'], schema => schema.required());
 
 module.exports={taskSchemaValidation}

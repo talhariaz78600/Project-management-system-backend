@@ -155,6 +155,125 @@ const   deleteTask = catchAsync(async (req, res, next) => {
   res.status(200).json({ status: 'success', data: null });
 });
 
+const approvedByManager = catchAsync(async (req, res, next) => {
+  const { id } = req.params;
+  const { approvedByManager } = req.body;
+  if (!mongoose.Types.ObjectId.isValid(id)) return next(new AppError('Invalid task ID', 400));
+
+  const task = await Task.findByIdAndUpdate(id, { approvedByManager }, { new: true });
+  if (!task) return next(new AppError('Task not found', 404));
+
+  res.status(200).json({ status: 'success', data: task ,message: 'Task approval status updated successfully'});
+});
+
+
+const getTaskCompletedByManagerForAUser = catchAsync(async (req, res, next) => {
+  const userId = req.user._id;
+
+  const tasks = await Task.find({ assignedTo: userId, status: 'Completed', approvedByManager: true });
+  res.status(200).json({ status: 'success', data: tasks });
+});
+
+const updatePaymentStatus = catchAsync(async (req, res, next) => {
+  const { id } = req.params;
+  const { status, screenShot } = req.body;
+  if (!mongoose.Types.ObjectId.isValid(id)) return next(new AppError('Invalid task ID', 400));
+
+  const task = await Task.findByIdAndUpdate(id, { payment: { status, screenShot } }, { new: true });
+  if (!task) return next(new AppError('Task not found', 404));
+
+  res.status(200).json({ status: 'success', data: task });
+});
+
+// Associate User Dashboard Analytics - Single comprehensive API
+const getAssociateUserAnalytics = catchAsync(async (req, res, next) => {
+  const userId = req.user._id;
+  const { months = 6 } = req.query;
+  
+  const startDate = new Date();
+  startDate.setMonth(startDate.getMonth() - months);
+
+  // Get task status counts for pie chart
+  const statusCounts = await Task.aggregate([
+    { $match: { assignedTo: userId } },
+    {
+      $group: {
+        _id: null,
+        pending: { $sum: { $cond: [{ $eq: ['$status', 'Pending'] }, 1, 0] } },
+        inProgress: { $sum: { $cond: [{ $eq: ['$status', 'In Progress'] }, 1, 0] } },
+        onHold: { $sum: { $cond: [{ $eq: ['$status', 'On Hold'] }, 1, 0] } },
+        completed: { $sum: { $cond: [{ $eq: ['$status', 'Completed'] }, 1, 0] } },
+        total: { $sum: 1 }
+      }
+    }
+  ]);
+
+  // Get monthly progress for line chart
+  const monthlyProgress = await Task.aggregate([
+    {
+      $match: {
+        assignedTo: userId,
+        createdAt: { $gte: startDate }
+      }
+    },
+    {
+      $group: {
+        _id: {
+          year: { $year: '$createdAt' },
+          month: { $month: '$createdAt' },
+          status: '$status'
+        },
+        count: { $sum: 1 }
+      }
+    },
+    {
+      $group: {
+        _id: { year: '$_id.year', month: '$_id.month' },
+        tasks: { $push: { status: '$_id.status', count: '$count' } },
+        totalTasks: { $sum: '$count' }
+      }
+    },
+    { $sort: { '_id.year': 1, '_id.month': 1 } }
+  ]);
+
+  // Get project distribution
+  const projectDistribution = await Task.aggregate([
+    { $match: { assignedTo: userId } },
+    {
+      $lookup: {
+        from: 'projects',
+        localField: 'projectId',
+        foreignField: '_id',
+        as: 'project'
+      }
+    },
+    { $unwind: '$project' },
+    {
+      $group: {
+        _id: '$project._id',
+        projectName: { $first: '$project.name' },
+        totalTasks: { $sum: 1 },
+        completedTasks: { $sum: { $cond: [{ $eq: ['$status', 'Completed'] }, 1, 0] } },
+        totalBudget: { $sum: '$budget' }
+      }
+    },
+    {
+      $addFields: {
+        completionRate: { $multiply: [{ $divide: ['$completedTasks', '$totalTasks'] }, 100] }
+      }
+    },
+    { $sort: { totalTasks: -1 } }
+  ]);
+
+  const result = {
+    taskStatusCounts: statusCounts[0] || { pending: 0, inProgress: 0, onHold: 0, completed: 0, total: 0 },
+    monthlyProgress,
+    projectDistribution
+  };
+
+  res.status(200).json({ status: 'success', data: result });
+});
+
 module.exports = {
   createTask,
   getTasks,
@@ -162,5 +281,9 @@ module.exports = {
   updateTask,
   deleteTask,
   getTasksbyAssignedUser,
-  getDeveloperTaskStats
+  getDeveloperTaskStats,
+  approvedByManager,
+  updatePaymentStatus,
+  getTaskCompletedByManagerForAUser,
+  getAssociateUserAnalytics
 };

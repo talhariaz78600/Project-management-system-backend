@@ -10,6 +10,12 @@ const taskSchema = new Schema({
     enum: ['Assigned', 'In Progress', 'Review', 'Completed', 'Pending','Review'],
     default: 'Assigned',
   },
+  payment: {
+
+    status: { type: String, enum: ['Pending', 'Completed'], default: 'Pending' },
+    screenShot: { type: String }
+  },
+  approvedByManager: { type: Boolean, default: false },
   priority: { type: String, enum: ['Low', 'Medium', 'High', 'Critical'], default: 'Medium' },
   projectId: { type: Schema.Types.ObjectId, ref: 'Project', required: true },
   assignedTo: { type: Schema.Types.ObjectId, ref: 'User', required: true },
