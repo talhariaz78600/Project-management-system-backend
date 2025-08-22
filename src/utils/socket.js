@@ -244,6 +244,7 @@ function initializeSocket(server) {
 
                 let receiverId = data?.receiverId;
                 const senderData = user
+                const { chatType, taskId } = data;
 
                 if (receiverId && typeof receiverId === 'object' && receiverId._id) {
                     receiverId = receiverId._id.toString();
@@ -293,16 +294,41 @@ function initializeSocket(server) {
 
                         return
                     } else {
-                        chat = await ChatsModel.findOne({
-                            participants: { $all: [userId, receiverId], $size: 2 }
-                        });
+                        // Check chat type and search accordingly
+                        if (chatType === 'task' && taskId) {
+                            // For task chat, find or create chat with task reference
+                            chat = await ChatsModel.findOne({
+                                participants: { $all: [userId, receiverId], $size: 2 },
+                                chatType: 'task',
+                                taskId: taskId
+                            });
+                        } else {
+                            // For regular chat, find without task reference
+                            chat = await ChatsModel.findOne({
+                                participants: { $all: [userId, receiverId], $size: 2 },
+                                chatType: 'chat'
+                            });
+                        }
 
                     }
 
                     if (!chat) {
                         console.log("No existing chat found. Creating a new one...");
 
-                        chat = await ChatsModel.create({ participants: [userId, receiverId] });
+                        // Create chat based on type
+                        const chatData = { 
+                            participants: [userId, receiverId]
+                        };
+                        
+                        if (chatType === 'task' && taskId) {
+                            chatData.chatType = 'task';
+                            chatData.taskId = taskId;
+                        } else {
+                            chatData.chatType = 'chat';
+                            // No taskId needed for regular chats since we made it conditional
+                        }
+
+                        chat = await ChatsModel.create(chatData);
 
                     }
 
@@ -312,7 +338,15 @@ function initializeSocket(server) {
 
 
                 const chatDetailsQuery = {
-                    ...(chatId ? { _id: chatId } : { participants: { $all: [userId, receiverId] } }),
+                    ...(chatId ? { _id: chatId } : {
+                        participants: { $all: [userId, receiverId] },
+                        ...(chatType === 'task' && taskId ? { 
+                            chatType: 'task', 
+                            taskId: taskId 
+                        } : { 
+                            chatType: 'chat'
+                        })
+                    }),
                 }
                 const chatDetails = await ChatsModel.findOne(chatDetailsQuery).populate('participants');
                 if (!chatDetails) {
@@ -391,6 +425,7 @@ function initializeSocket(server) {
                         fileSize: addMessage?.fileSize ?? '',
                         latestMessageDescription: addMessage?.contentDescription ?? '',
                         unreadCount: unreadCount,
+                        ...(chatDetails?.chatType === 'task' && chatDetails?.taskId && { taskId: chatDetails.taskId }),
 
                     },
                     messageScreenBody: {
@@ -660,6 +695,127 @@ function initializeSocket(server) {
                 console.log(error)
 
                 socket.emit('socket-error', { message: 'Failed to send message' });
+                return;
+            }
+        });
+        ////////////////////////////////get single chat for user /////////////////////////
+        socket.on('get-task-chat', async (data) => {
+            try {
+                let receiverId = data?.receiverId;
+                const taskId = data?.taskId; // Get taskId from data
+                const senderData = user;
+
+                if (!taskId) {
+                    socket.emit('socket-error', { message: 'Task ID is required' });
+                    return;
+                }
+
+                if (receiverId && typeof receiverId === 'object' && receiverId._id) {
+                    receiverId = receiverId._id.toString();
+                }
+
+                let receiverData;
+                if (!receiverId) {
+                    receiverData = await User.findOne({ role: "admin" });
+                    receiverId = receiverData?._id.toString();
+                } else {
+                    receiverData = await User.findById(receiverId.toString());
+                }
+
+                if (!receiverData) {
+                    socket.emit('socket-error', { message: `Invalid receiver data.` });
+                    return;
+                }
+
+                // Find task-specific chat
+                let chat = await ChatsModel.findOne({
+                    participants: { $all: [userId, receiverId], $size: 2 },
+                    chatType: 'task',
+                    taskId: taskId
+                });
+
+                if (!chat) {
+                    console.log("No existing task chat found. Creating a new one...");
+                    chat = await ChatsModel.create({ 
+                        participants: [userId, receiverId],
+                        chatType: 'task',
+                        taskId: taskId
+                    });
+                }
+
+                const chatId = chat._id;
+                const chatDetails = await ChatsModel.findById(chatId).populate('participants');
+                
+                if (!chatDetails) {
+                    console.log(`No chat found against chat id ${chatId}`);
+                    socket.emit('socket-error', { message: 'No chat found.' });
+                    return;
+                }
+
+                chatDetails.markModified('userSettings');
+                await chatDetails.save();
+
+                const chatName = (userId.toString() === receiverId.toString() 
+                    ? `${chatDetails?.participants?.find(participant => participant?._id?.toString() === userId.toString())?.fullName} (You)` 
+                    : chatDetails?.participants?.find(participant => participant?._id?.toString() !== userId.toString())?.fullName);
+
+                const receiverSocketId = io.sockets.adapter.rooms.get(receiverId?.toString?.());
+                
+                const messageEmitBody = {
+                    chatScreenBody: {
+                        chatId,
+                        chatName,
+                        chatType: 'task',
+                        taskId: taskId,
+                        receiverId,
+                        latestMessage: '',
+                        latesMessageId: null,
+                        latestMessageType: 'text',
+                        contentDescriptionType: 'text',
+                        latestMessageSentAt: null,
+                        latestMessageTitle: '',
+                        fileSize: '',
+                        latestMessageDescription: ''
+                    }
+                };
+
+                const chatNameForUser = (chatDetails, userId) => {
+                    return chatDetails?.groupName ||
+                        chatDetails?.participants?.find(participant => 
+                            participant?._id?.toString?.() !== userId?.toString?.())?.fullName;
+                };
+
+                const chatProfileForUser = (chatDetails, userId) => {
+                    return chatDetails?.participants?.find(participant => 
+                        participant?._id?.toString?.() != userId.toString?.())?.profilePicture ?? defaultImage;
+                };
+
+                // Emit to current user
+                io.to(userId.toString()).emit('get-task-chat-response', {
+                    ...messageEmitBody,
+                    chatScreenBody: {
+                        ...messageEmitBody.chatScreenBody,
+                        unreadCount: 0,
+                        chatName: chatNameForUser(chatDetails, userId),
+                        displayPicture: chatProfileForUser(chatDetails, userId),
+                    }
+                });
+
+                // Emit to receiver if online
+                if (receiverId.toString() !== userId.toString() && receiverSocketId) {
+                    io.to(receiverId.toString()).emit('get-task-chat-response', {
+                        ...messageEmitBody,
+                        chatScreenBody: {
+                            ...messageEmitBody.chatScreenBody,
+                            chatName: chatNameForUser(chatDetails, receiverId),
+                            displayPicture: chatProfileForUser(chatDetails, receiverId),
+                        }
+                    });
+                }
+
+            } catch (error) {
+                console.log(error);
+                socket.emit('socket-error', { message: 'Failed to get task chat' });
                 return;
             }
         });

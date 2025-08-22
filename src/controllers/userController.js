@@ -183,6 +183,67 @@ const getDashboardStats = catchAsync(async (req, res) => {
     { $project: { status: '$_id', count: 1, _id: 0 } }
   ]);
 
+  // Project trends over time (current year only)
+  const currentDate = new Date();
+  const currentYear = currentDate.getFullYear();
+  const startOfYear = new Date(currentYear, 0, 1);
+  const endOfYear = new Date(currentYear, 11, 31, 23, 59, 59);
+  
+  const projectTrendsData = await Project.aggregate([
+    {
+      $match: {
+        createdAt: { $gte: startOfYear, $lte: endOfYear }
+      }
+    },
+    {
+      $group: {
+        _id: {
+          month: { $month: '$createdAt' },
+          year: { $year: '$createdAt' },
+          status: '$status'
+        },
+        count: { $sum: 1 }
+      }
+    }
+  ]);
+  console.log('Project trends data:', projectTrendsData);
+
+  // Generate all months for the current year
+  const monthNames = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+  
+  const projectTrends = [];
+  for (let i = 0; i < 12; i++) {
+    const month = i + 1;
+    const monthName = monthNames[i];
+    
+    // Get unique statuses from the data
+    const statuses = [...new Set(projectTrendsData.map(item => item._id.status))];
+    
+    // If no statuses found, use default ones
+    if (statuses.length === 0) {
+      statuses.push('Pending', 'Ongoing', 'Completed', 'On Hold');
+    }
+    
+    statuses.forEach(status => {
+      const existingData = projectTrendsData.find(
+        item => item._id.month === month && 
+                item._id.year === currentYear && 
+                item._id.status === status
+      );
+      
+      projectTrends.push({
+        month: monthName,
+        monthNumber: month,
+        year: currentYear,
+        status: status,
+        count: existingData ? existingData.count : 0
+      });
+    });
+  }
+
   // Last 4 projects (most recent)
   const lastProjects = await Project.aggregate([
        {
@@ -251,6 +312,7 @@ const getDashboardStats = catchAsync(async (req, res) => {
     data: {
       userStats,
       projectStats,
+      projectTrends,
       lastProjects
     }
   });

@@ -392,7 +392,7 @@ module.exports = {
             const { userId, pageNo = 1, recordsPerPage = 10, others = false } = params;
             const userChatIds = await Chats.find(
                 {
-                    
+                    chatType: { $ne: 'task' },
                     participants: new ObjectId(userId),
                     $or: [
                         { userSettings: { $size: 0 } },

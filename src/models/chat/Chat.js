@@ -11,6 +11,18 @@ const userSettingsSchema = new Schema({
 
 const chatSchema = new Schema(
   {
+    chatType: {
+      type: String,
+      enum: ['chat', 'task'],
+      // required: true
+    },
+    taskId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Task',
+      required: function() {
+        return this.chatType === 'task';
+      }
+    },
     participants: [
       {
         type: Schema.Types.ObjectId,

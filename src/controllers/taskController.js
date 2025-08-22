@@ -188,10 +188,11 @@ const updatePaymentStatus = catchAsync(async (req, res, next) => {
 // Associate User Dashboard Analytics - Single comprehensive API
 const getAssociateUserAnalytics = catchAsync(async (req, res, next) => {
   const userId = req.user._id;
-  const { months = 6 } = req.query;
   
-  const startDate = new Date();
-  startDate.setMonth(startDate.getMonth() - months);
+  // Get full current year data
+  const currentYear = new Date().getFullYear();
+  const startDate = new Date(currentYear, 0, 1); // January 1st of current year
+  const endDate = new Date(currentYear, 11, 31); // December 31st of current year
 
   // Get task status counts for pie chart
   const statusCounts = await Task.aggregate([
@@ -208,33 +209,79 @@ const getAssociateUserAnalytics = catchAsync(async (req, res, next) => {
     }
   ]);
 
-  // Get monthly progress for line chart
+  // Get monthly task completion and earnings for current year
   const monthlyProgress = await Task.aggregate([
     {
       $match: {
         assignedTo: userId,
-        createdAt: { $gte: startDate }
+        createdAt: { $gte: startDate, $lte: endDate }
       }
     },
     {
       $group: {
-        _id: {
-          year: { $year: '$createdAt' },
-          month: { $month: '$createdAt' },
-          status: '$status'
+        _id: { $month: '$createdAt' },
+        tasksCompleted: { $sum: { $cond: [{ $eq: ['$status', 'Completed'] }, 1, 0] } },
+        totalEarnings: { 
+          $sum: { 
+            $cond: [
+              { $eq: ['$status', 'Completed'] }, 
+              '$budget', 
+              0 
+            ] 
+          } 
         },
-        count: { $sum: 1 }
+        totalTasks: { $sum: 1 }
+      }
+    }
+  ]);
+
+  // Create full year data with month names and 0 for missing months
+  const monthNames = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+
+  const fullYearData = monthNames.map((monthName, index) => {
+    const monthNumber = index + 1;
+    const monthData = monthlyProgress.find(item => item._id === monthNumber);
+    
+    return {
+      month: monthName,
+      monthNumber,
+      tasksCompleted: monthData ? monthData.tasksCompleted : 0,
+      totalEarnings: monthData ? monthData.totalEarnings : 0,
+      totalTasks: monthData ? monthData.totalTasks : 0
+    };
+  });
+
+  // Get monthly task completion by month for bar chart
+  const taskCompletionByMonth = await Task.aggregate([
+    {
+      $match: {
+        assignedTo: userId,
+        status: 'Completed',
+        createdAt: { $gte: startDate, $lte: endDate }
       }
     },
     {
       $group: {
-        _id: { year: '$_id.year', month: '$_id.month' },
-        tasks: { $push: { status: '$_id.status', count: '$count' } },
-        totalTasks: { $sum: '$count' }
+        _id: { $month: '$createdAt' },
+        tasksCompleted: { $sum: 1 }
       }
-    },
-    { $sort: { '_id.year': 1, '_id.month': 1 } }
+    }
   ]);
+
+  // Create full year completion data with month names
+  const fullYearCompletionData = monthNames.map((monthName, index) => {
+    const monthNumber = index + 1;
+    const monthData = taskCompletionByMonth.find(item => item._id === monthNumber);
+    
+    return {
+      month: monthName,
+      monthNumber,
+      tasksCompleted: monthData ? monthData.tasksCompleted : 0
+    };
+  });
 
   // Get project distribution
   const projectDistribution = await Task.aggregate([
@@ -266,8 +313,10 @@ const getAssociateUserAnalytics = catchAsync(async (req, res, next) => {
   ]);
 
   const result = {
+    year: currentYear,
     taskStatusCounts: statusCounts[0] || { pending: 0, inProgress: 0, onHold: 0, completed: 0, total: 0 },
-    monthlyProgress,
+    monthlyTaskCompletionAndEarnings: fullYearData,
+    taskCompletionByMonth: fullYearCompletionData,
     projectDistribution
   };
 

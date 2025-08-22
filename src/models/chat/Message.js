@@ -15,6 +15,11 @@ const messageSchema = new Schema({
 		ref: 'chats',
 		required: true
 	},
+	chatType: {
+		type: String,
+		enum: ['chat', 'task'],
+		// required: true
+	},
 	sender: {
 		type: Schema.Types.ObjectId,
 		ref: 'User',
