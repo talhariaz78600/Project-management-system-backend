@@ -64,7 +64,8 @@ const userSchema = new Schema(
     passwordResetToken: String,
     passwordResetExpires: Date,
     deactivatedAt: Date,
-    lastSeen: Date
+    lastSeen: Date,
+    lastEmailNotification: Date
   },
   {
     discriminatorKey: 'role',

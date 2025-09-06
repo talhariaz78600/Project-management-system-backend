@@ -10,6 +10,7 @@ router.get('/developer/stats',  taskController.getDeveloperTaskStats);
 router.get('/project/:projectId',  taskController.getTasks);
 router.get('/:id',  taskController.getTask);
 router.patch('/:id',  taskController.updateTask);
+router.patch('/:id/status-update', restrictTo('associateUser'), taskController.updateTaskStatus);
 router.get('/completed/payments', restrictTo('associateUser'), taskController.getTaskCompletedByManagerForAUser);
 router.delete('/:id',  taskController.deleteTask);
 router.patch('/:id/status', restrictTo('admin', 'subAdmin'), taskController.approvedByManager);

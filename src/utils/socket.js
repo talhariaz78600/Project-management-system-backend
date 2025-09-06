@@ -24,6 +24,7 @@ const {
 
 } = require('./socket-utils');
 const User = require('../models/users/User');
+const Task = require('../models/Task');
 
 
 
@@ -126,6 +127,17 @@ function initializeSocket(server) {
                 });
 
             }
+
+            // Check for unread notifications when user comes online
+            const Notification = require('../models/Notification');
+            const unreadNotifications = await Notification.find({ recipient: userId }).limit(5);
+            if (unreadNotifications.length > 0) {
+                socket.emit('unread-notifications', { 
+                    notifications: unreadNotifications,
+                    count: unreadNotifications.length 
+                });
+            }
+
         } catch (error) {
             console.log("socket connection error")
             socket.emit('socket-error', { message: 'Error in updating chats.' });
@@ -250,7 +262,7 @@ function initializeSocket(server) {
                     receiverId = receiverId._id.toString();
                 }
 
-
+                console.log("data in send message", receiverId,data?.chatId)
                 if (data?.chatId) {
                     const validateUserChat = await ChatsModel.findOne({ _id: data?.chatId, participants: new ObjectId(userId) });
                     console.log(`Got chat validation response in DB [send-message]: ${JSON.stringify(validateUserChat)}`);
@@ -483,6 +495,38 @@ function initializeSocket(server) {
                             },
                         });
                         io.to(userId?.toString?.()).emit('mark-message-deliver-response', { success: true, chatId, allMsgsDelivered: true });
+                    } else {
+                        // Receiver is offline, send notification
+                        try {
+                            const Notification = require('../models/Notification');
+                            const Email = require('../utils/email');
+                            
+                            // Create notification in database
+                            await Notification.create({
+                                recipient: receiverId,
+                                title: 'New Message',
+                                message: `You have a new message from ${senderData?.fullName || 'Someone'}`,
+                                link: `/chat/${chatId}`
+                            });
+
+                            // Check if we should send email (limit to avoid spam)
+                            const shouldSendEmail = await shouldSendEmailNotification(receiverId);
+                            
+                            // Send email notification if receiver is offline and email is allowed
+                            if (receiverData?.email && shouldSendEmail) {
+                                const emailInstance = new Email(receiverData.email, receiverData.firstName, `/chat/${chatId}`);
+                                await emailInstance.sendTextEmail(
+                                    'New Message Received', 
+                                    `Hello ${receiverData.firstName || 'User'},\n\nYou have received a new message from ${senderData?.fullName || 'Someone'}.\n\nMessage: ${addMessage?.content || 'New message'}\n\nPlease check your messages.`, 
+                                    {}
+                                );
+                                
+                                // Update last email notification time
+                                await updateLastEmailNotificationTime(receiverId);
+                            }
+                        } catch (notificationError) {
+                            console.error('Error sending offline message notification:', notificationError);
+                        }
                     }
                 }
 
@@ -514,7 +558,7 @@ function initializeSocket(server) {
                 chatDetails.markModified('userSettings');
 
             } catch (error) {
-                console.log(error)
+                console.log(error,"errrrr............")
 
                 socket.emit('socket-error', { message: 'Failed to send message' });
                 return;
@@ -709,6 +753,7 @@ function initializeSocket(server) {
                     socket.emit('socket-error', { message: 'Task ID is required' });
                     return;
                 }
+                const task= await Task.findById(taskId);
 
                 if (receiverId && typeof receiverId === 'object' && receiverId._id) {
                     receiverId = receiverId._id.toString();
@@ -736,8 +781,9 @@ function initializeSocket(server) {
 
                 if (!chat) {
                     console.log("No existing task chat found. Creating a new one...");
+                   const adminUser = await User.findOne({ role: "admin" });
                     chat = await ChatsModel.create({ 
-                        participants: [userId, receiverId],
+                        participants: [task?.assignedTo, adminUser?._id.toString()],
                         chatType: 'task',
                         taskId: taskId
                     });
@@ -1104,11 +1150,149 @@ function initializeSocket(server) {
             }
         });
 
+        // Notification-related socket events
+        socket.on('fetch-notifications', async (data) => {
+            try {
+                console.log(`fetch-notifications event received for socket ${socketId} and user ${userId}`);
+                const Notification = require('../models/Notification');
+                
+                const { page = 1, limit = 20 } = data || {};
+                const skip = (page - 1) * limit;
+                
+                const notifications = await Notification.find({ recipient: userId })
+                    .sort({ createdAt: -1 })
+                    .skip(skip)
+                    .limit(parseInt(limit));
+                
+                const total = await Notification.countDocuments({ recipient: userId });
+                
+                socket.emit('notifications-list', {
+                    notifications,
+                    pagination: {
+                        page: parseInt(page),
+                        limit: parseInt(limit),
+                        total,
+                        pages: Math.ceil(total / limit)
+                    }
+                });
+            } catch (error) {
+                console.log(`Got error in fetch-notifications: ${JSON.stringify(error?.stack)}`);
+                socket.emit('socket-error', { message: 'Error in fetching notifications.' });
+            }
+        });
+
+        socket.on('mark-notification-read', async (data) => {
+            try {
+                console.log(`mark-notification-read event received for socket ${socketId} and user ${userId} with data: ${JSON.stringify(data)}`);
+                const { notificationId } = data;
+                
+                if (!notificationId) {
+                    socket.emit('socket-error', { message: 'Notification ID is required.' });
+                    return;
+                }
+                
+                const Notification = require('../models/Notification');
+                
+                // Find and verify the notification belongs to the user
+                const notification = await Notification.findOne({ 
+                    _id: notificationId, 
+                    recipient: userId 
+                });
+                
+                if (!notification) {
+                    socket.emit('socket-error', { message: 'Notification not found or access denied.' });
+                    return;
+                }
+                
+                // Delete the notification (mark as read = delete)
+                await Notification.findByIdAndDelete(notificationId);
+                
+                socket.emit('notification-marked-read', { 
+                    success: true, 
+                    notificationId,
+                    message: 'Notification marked as read and deleted.' 
+                });
+                
+            } catch (error) {
+                console.log(`Got error in mark-notification-read: ${JSON.stringify(error?.stack)}`);
+                socket.emit('socket-error', { message: 'Error in marking notification as read.' });
+            }
+        });
+
+        socket.on('mark-all-notifications-read', async (data) => {
+            try {
+                console.log(`mark-all-notifications-read event received for socket ${socketId} and user ${userId}`);
+                const Notification = require('../models/Notification');
+                
+                // Delete all notifications for the user
+                const result = await Notification.deleteMany({ recipient: userId });
+                
+                socket.emit('all-notifications-marked-read', { 
+                    success: true, 
+                    deletedCount: result.deletedCount,
+                    message: 'All notifications marked as read and deleted.' 
+                });
+                
+            } catch (error) {
+                console.log(`Got error in mark-all-notifications-read: ${JSON.stringify(error?.stack)}`);
+                socket.emit('socket-error', { message: 'Error in marking all notifications as read.' });
+            }
+        });
+
+        socket.on('get-notification-count', async (data) => {
+            try {
+                console.log(`get-notification-count event received for socket ${socketId} and user ${userId}`);
+                const Notification = require('../models/Notification');
+                
+                const count = await Notification.countDocuments({ recipient: userId });
+                
+                socket.emit('notification-count', { count });
+                
+            } catch (error) {
+                console.log(`Got error in get-notification-count: ${JSON.stringify(error?.stack)}`);
+                socket.emit('socket-error', { message: 'Error in getting notification count.' });
+            }
+        });
+
 
 
 
     });
 
+}
+
+// Helper function to check if email notification should be sent (to avoid spam)
+async function shouldSendEmailNotification(userId) {
+    try {
+        const User = require('../models/users/User');
+        const user = await User.findById(userId);
+        
+        if (!user) return false;
+        
+        // Check if user has lastEmailNotification field and if it's been at least 30 minutes
+        const now = new Date();
+        const lastEmailNotification = user.lastEmailNotification;
+        
+        if (!lastEmailNotification) return true;
+        
+        const timeDifference = now.getTime() - lastEmailNotification.getTime();
+        const thirtyMinutesInMs = 30 * 60 * 1000; // 30 minutes
+        
+        return timeDifference >= thirtyMinutesInMs;
+    } catch (error) {
+        console.error('Error checking email notification frequency:', error);
+        return false;
+    }
+}
+
+// Helper function to update last email notification time
+async function updateLastEmailNotificationTime(userId) {
+    try {
+        const User = require('../models/users/User');
+        await User.findByIdAndUpdate(userId, { lastEmailNotification: new Date() });
+    } catch (error) {
+        console.error('Error updating last email notification time:', error);
+    }
 }
 
 function getIO() {

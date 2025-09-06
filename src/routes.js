@@ -5,6 +5,7 @@ const logsRoute=require('./routes/LogsRoute')
 const taskRoute=require('./routes/taskRoute')
 const associateRoute=require('./routes/assocaiteRoute')
 const roleRoute=require('./routes/roleRoute')
+const notificationRoute=require('./routes/notificationRoute')
 
 module.exports={
     authRoute,
@@ -13,5 +14,6 @@ module.exports={
     logsRoute,
     taskRoute,
     associateRoute,
-    roleRoute
+    roleRoute,
+    notificationRoute
 }
