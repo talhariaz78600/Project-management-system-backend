@@ -454,7 +454,7 @@ const loginUser = catchAsync(async (req, res, next) => {
     return next(new AppError('Invalid credentials', 401, fieldErrors));
   }
 
-  if (user?.status === "Pending") {
+  if (user?.status === "Potential") {
     return next(new AppError('This account is under review by Admin. Please contact with Admin', 404));
   } if (user?.status === "Rejected") {
     return next(new AppError('This account is rejected by Admin. Please contact with Admin', 404));

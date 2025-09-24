@@ -7,14 +7,15 @@ const taskSchema = new Schema({
   description: { type: String },
   status: {
     type: String,
-    enum: ['Assigned', 'In Progress', 'Review', 'Completed', 'Pending','In Review'],
+    enum: ['Assigned', 'In Progress', 'Review', 'Completed', 'Potential','In Review'],
     default: 'Assigned',
   },
-  payment: {
-
-    status: { type: String, enum: ['Pending', 'Completed'], default: 'Pending' },
-    screenShot: { type: String }
-  },
+  payment: [{
+    name: { type: String },
+    status: { type: String, enum: ['Potential', 'Completed'], default: 'Potential' },
+    screenShot: { type: String },
+    price: { type: Number, min: 0 }
+  }],
   approvedByManager: { type: Boolean, default: false },
   priority: { type: String, enum: ['Low', 'Medium', 'High', 'Critical'], default: 'Medium' },
   projectId: { type: Schema.Types.ObjectId, ref: 'Project', required: true },

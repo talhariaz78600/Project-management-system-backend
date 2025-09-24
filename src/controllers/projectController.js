@@ -380,12 +380,12 @@ const getClientProjects = catchAsync(async (req, res, next) => {
             }
           }
         },
-        pendingTasks: {
+        PotentialTasks: {
           $size: {
             $filter: {
               input: '$tasks',
               as: 'task',
-              cond: { $eq: ['$$task.status', 'Pending'] }
+              cond: { $eq: ['$$task.status', 'Potential'] }
             }
           }
         },
@@ -445,7 +445,7 @@ const updateProjectStatus = catchAsync(async (req, res, next) => {
   const { id } = req.params;
   const { status } = req.body;
 
-  if (!['Pending', 'Ongoing', 'Completed', 'On Hold'].includes(status)) {
+  if (!['Potential', 'Ongoing', 'Completed', 'On Hold'].includes(status)) {
     return next(new AppError('Invalid project status.', 400));
   }
 

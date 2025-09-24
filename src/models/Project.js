@@ -7,10 +7,11 @@ const projectSchema = new Schema({
   description: { type: String },
   status: {
     type: String,
-    enum: ['Pending', 'Ongoing', 'Completed', 'On Hold'],
-    default: 'Pending',
+    enum: ['Potential', 'Ongoing', 'Completed', 'Pause'],
+    default: 'Potential',
   },
   deadline: { type: Date },
+  budget: { type: Number, min: 0 },
   docs: {
     type: String, // URL or path to project documents
     trim: true,

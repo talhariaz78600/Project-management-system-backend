@@ -5,7 +5,7 @@
       const Notification = require('../models/Notification');
       const AppError = require('../utils/appError');
       const catchAsync = require('../utils/catchAsync');
-      const { taskSchemaValidation } = require('../utils/joi/taskValidation');
+      const { taskSchemaValidation, milestoneValidation, updateMilestoneValidation } = require('../utils/joi/taskValidation');
       const joiError = require('../utils/joiError');
       const Email = require('../utils/email');
       const { getIO } = require('../utils/socket');
@@ -300,9 +300,9 @@ const updateTask = catchAsync(async (req, res, next) => {
 const getDeveloperTaskStats = catchAsync(async (req, res, next) => {
   const developerId = req.user._id;
 
-  const [total, pending, inProgress, completed, onHold] = await Promise.all([
+  const [total, Potential, inProgress, completed, onHold] = await Promise.all([
     Task.countDocuments({ assignedTo: developerId }),
-    Task.countDocuments({ assignedTo: developerId, status: 'Pending' }),
+    Task.countDocuments({ assignedTo: developerId, status: 'Potential' }),
     Task.countDocuments({ assignedTo: developerId, status: 'In Progress' }),
     Task.countDocuments({ assignedTo: developerId, status: 'Completed' }),
     Task.countDocuments({ assignedTo: developerId, status: 'On Hold' }),
@@ -312,7 +312,7 @@ const getDeveloperTaskStats = catchAsync(async (req, res, next) => {
     status: 'success',
     data: {
       totalTasks: total,
-      pendingTasks: pending,
+      PotentialTasks: Potential,
       inProgressTasks: inProgress,
       completedTasks: completed,
       onHoldTasks: onHold,
@@ -389,13 +389,151 @@ const getTaskCompletedByManagerForAUser = catchAsync(async (req, res, next) => {
   res.status(200).json({ status: 'success', data: tasks });
 });
 
-const updatePaymentStatus = catchAsync(async (req, res, next) => {
+// Add a new payment milestone
+const addPaymentMilestone = catchAsync(async (req, res, next) => {
   const { id } = req.params;
-  const { status, screenShot } = req.body;
+  const { name, status = 'Potential', screenShot, price } = req.body;
+  console.log(name, status, screenShot, price, req.body);
+
+  // Validate input
+  // const { error } = milestoneValidation.validate(req.body);
+  // if (error) {
+  //   const errorFields = joiError(error);
+  //   return next(new AppError("Invalid milestone data", 400, { fieldErrors: errorFields }));
+  // }
+  
   if (!mongoose.Types.ObjectId.isValid(id)) return next(new AppError('Invalid task ID', 400));
 
-  const task = await Task.findByIdAndUpdate(id, { payment: { status, screenShot } }, { new: true });
+  const task = await Task.findById(id);
   if (!task) return next(new AppError('Task not found', 404));
+
+  task.payment.push({ name, status, screenShot, price });
+  await task.save();
+
+  res.status(200).json({ 
+    status: 'success', 
+    message: 'Payment milestone added successfully',
+    data: task 
+  });
+});
+
+// Update a specific payment milestone
+const updatePaymentMilestone = catchAsync(async (req, res, next) => {
+  const { id, milestoneId } = req.params;
+  const { name, status, screenShot, price } = req.body;
+  
+  // Validate input
+  const { error } = updateMilestoneValidation.validate({ ...req.body, milestoneId });
+  if (error) {
+    const errorFields = joiError(error);
+    return next(new AppError("Invalid milestone data", 400, { fieldErrors: errorFields }));
+  }
+  
+  if (!mongoose.Types.ObjectId.isValid(id)) return next(new AppError('Invalid task ID', 400));
+
+  const task = await Task.findById(id);
+  if (!task) return next(new AppError('Task not found', 404));
+
+  const milestone = task.payment.id(milestoneId);
+  if (!milestone) return next(new AppError('Milestone not found', 404));
+
+  if (name !== undefined) milestone.name = name;
+  if (status !== undefined) milestone.status = status;
+  if (screenShot !== undefined) milestone.screenShot = screenShot;
+  if (price !== undefined) milestone.price = price;
+
+  await task.save();
+
+  res.status(200).json({ 
+    status: 'success', 
+    message: 'Payment milestone updated successfully',
+    data: task 
+  });
+});
+
+// Get all payment milestones for a task
+const getPaymentMilestones = catchAsync(async (req, res, next) => {
+  const { id } = req.params;
+  
+  if (!mongoose.Types.ObjectId.isValid(id)) return next(new AppError('Invalid task ID', 400));
+
+  const task = await Task.findById(id).populate('assignedTo', 'name email').populate('projectId', 'title');
+  if (!task) return next(new AppError('Task not found', 404));
+
+  res.status(200).json({ 
+    status: 'success', 
+    data: {
+      task: {
+        _id: task._id,
+        title: task.title,
+        description: task.description,
+        assignedTo: task.assignedTo,
+        projectId: task.projectId
+      },
+      milestones: task.payment
+    }
+  });
+});
+
+// Delete a payment milestone
+const deletePaymentMilestone = catchAsync(async (req, res, next) => {
+  const { id, milestoneId } = req.params;
+  
+  if (!mongoose.Types.ObjectId.isValid(id)) return next(new AppError('Invalid task ID', 400));
+
+  const task = await Task.findById(id);
+  if (!task) return next(new AppError('Task not found', 404));
+
+  const milestone = task.payment.id(milestoneId);
+  if (!milestone) return next(new AppError('Milestone not found', 404));
+
+  task.payment.id(milestoneId).remove();
+  await task.save();
+
+  res.status(200).json({ 
+    status: 'success', 
+    message: 'Payment milestone deleted successfully',
+    data: task 
+  });
+});
+
+// Legacy function - kept for backward compatibility but updated for array structure
+const updatePaymentStatus = catchAsync(async (req, res, next) => {
+  const { id } = req.params;
+  const { status, screenShot, milestoneId, price } = req.body;
+  if (!mongoose.Types.ObjectId.isValid(id)) return next(new AppError('Invalid task ID', 400));
+
+  const task = await Task.findById(id);
+  if (!task) return next(new AppError('Task not found', 404));
+
+  if (milestoneId) {
+    // Update specific milestone
+    const milestone = task.payment.id(milestoneId);
+    if (!milestone) return next(new AppError('Milestone not found', 404));
+    
+    if (status !== undefined) milestone.status = status;
+    if (screenShot !== undefined) milestone.screenShot = screenShot;
+    if (price !== undefined) milestone.price = price;
+  } else {
+    // Update first milestone or create one if none exists
+    if (task.payment.length > 0) {
+      if (status !== undefined) task.payment[0].status = status;
+      if (screenShot !== undefined) task.payment[0].screenShot = screenShot;
+      if (price !== undefined) task.payment[0].price = price;
+    } else {
+      // Create first milestone (requires price for new milestone)
+      if (!price) return next(new AppError('Price is required when creating a new milestone', 400));
+      
+      task.payment.push({ 
+        name: 'Default Milestone', 
+        status: status || 'Potential', 
+        screenShot,
+        price
+      });
+    }
+  }
+
+  await task.save();
 
   res.status(200).json({ status: 'success', data: task });
 });
@@ -415,7 +553,7 @@ const getAssociateUserAnalytics = catchAsync(async (req, res, next) => {
     {
       $group: {
         _id: null,
-        pending: { $sum: { $cond: [{ $eq: ['$status', 'Pending'] }, 1, 0] } },
+        Potential: { $sum: { $cond: [{ $eq: ['$status', 'Potential'] }, 1, 0] } },
         inProgress: { $sum: { $cond: [{ $eq: ['$status', 'In Progress'] }, 1, 0] } },
         onHold: { $sum: { $cond: [{ $eq: ['$status', 'On Hold'] }, 1, 0] } },
         completed: { $sum: { $cond: [{ $eq: ['$status', 'Completed'] }, 1, 0] } },
@@ -529,7 +667,7 @@ const getAssociateUserAnalytics = catchAsync(async (req, res, next) => {
 
   const result = {
     year: currentYear,
-    taskStatusCounts: statusCounts[0] || { pending: 0, inProgress: 0, onHold: 0, completed: 0, total: 0 },
+    taskStatusCounts: statusCounts[0] || { Potential: 0, inProgress: 0, onHold: 0, completed: 0, total: 0 },
     monthlyTaskCompletionAndEarnings: fullYearData,
     taskCompletionByMonth: fullYearCompletionData,
     projectDistribution
@@ -548,6 +686,10 @@ module.exports = {
   getTasksbyAssignedUser,
   getDeveloperTaskStats,
   approvedByManager,
+  addPaymentMilestone,
+  updatePaymentMilestone,
+  deletePaymentMilestone,
+  getPaymentMilestones,
   updatePaymentStatus,
   getTaskCompletedByManagerForAUser,
   getAssociateUserAnalytics

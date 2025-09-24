@@ -11,7 +11,7 @@ const hpp = require('hpp');
 const cookieParser = require('cookie-parser');
 const compression = require('compression');
 const qs = require('qs');
-// const autoDeleteOldPendingBookings = require('../jobs/autoDeleteOldPendingBookings');
+// const autoDeleteOldPotentialBookings = require('../jobs/autoDeleteOldPotentialBookings');
 // const updateBookingStatus = require('../jobs/updateBookingStatus');
 
 module.exports = (app) => {

@@ -16,6 +16,12 @@ router.delete('/:id',  taskController.deleteTask);
 router.patch('/:id/status', restrictTo('admin', 'subAdmin'), taskController.approvedByManager);
 router.patch('/:id/payment', restrictTo('admin', 'subAdmin'), taskController.updatePaymentStatus);
 
+// Payment milestone management routes
+router.get('/:id/milestones', taskController.getPaymentMilestones);
+router.post('/:id/milestones', restrictTo('admin', 'subAdmin'), taskController.addPaymentMilestone);
+router.patch('/:id/milestones/:milestoneId', restrictTo('admin', 'subAdmin'), taskController.updatePaymentMilestone);
+router.delete('/:id/milestones/:milestoneId', restrictTo('admin', 'subAdmin'), taskController.deletePaymentMilestone);
+
 // Associate User Dashboard Analytics
 router.get('/dashboard/analytics', restrictTo('associateUser'), taskController.getAssociateUserAnalytics);
 

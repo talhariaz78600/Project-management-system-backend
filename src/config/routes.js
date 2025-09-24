@@ -7,7 +7,8 @@ const {
   taskRoute,
   associateRoute,
   roleRoute,
-  notificationRoute
+  notificationRoute,
+  budgetMilestoneRoute
 } = require('../routes');
 // const otherRoutes = require('./otherRoutes');
 
@@ -20,6 +21,7 @@ module.exports = (app) => {
   app.use('/api/associate', associateRoute);
   app.use('/api/role', roleRoute);
   app.use('/api/notifications', notificationRoute);
+  app.use('/api/budget-milestones', budgetMilestoneRoute);
 
 
 };

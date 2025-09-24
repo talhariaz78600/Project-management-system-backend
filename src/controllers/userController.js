@@ -224,7 +224,7 @@ const getDashboardStats = catchAsync(async (req, res) => {
     
     // If no statuses found, use default ones
     if (statuses.length === 0) {
-      statuses.push('Pending', 'Ongoing', 'Completed', 'On Hold');
+      statuses.push('Potential', 'Ongoing', 'Completed', 'On Hold');
     }
     
     statuses.forEach(status => {

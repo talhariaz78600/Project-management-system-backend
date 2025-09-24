@@ -1012,7 +1012,7 @@ module.exports = {
                         isBlocked,
                         blockedByMe,
                         ...(Object.keys(messageDeliveryStatus || {})?.length && { ...messageDeliveryStatus }),
-                        isOthersRequestPending: JSON.parse(userSettings?.isOthersRequestPending || false) ? true : false,
+                        isOthersRequestPotential: JSON.parse(userSettings?.isOthersRequestPotential || false) ? true : false,
                     }
                     return chatDisplayInfo;
                 }));
@@ -1067,7 +1067,7 @@ module.exports = {
                     });
                 } else {
                     userSettings.isChatWithContact = true;
-                    userSettings.isOthersRequestPending = false;
+                    userSettings.isOthersRequestPotential = false;
                     userSettings.isRequestAccepted = true;
                 }
             }
