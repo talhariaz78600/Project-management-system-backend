@@ -445,7 +445,7 @@ const updateProjectStatus = catchAsync(async (req, res, next) => {
   const { id } = req.params;
   const { status } = req.body;
 
-  if (!['Potential', 'Ongoing', 'Completed', 'On Hold'].includes(status)) {
+  if (!['Potential', 'Ongoing', 'Completed', 'Pause'].includes(status)) {
     return next(new AppError('Invalid project status.', 400));
   }
 
