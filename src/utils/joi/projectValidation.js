@@ -3,7 +3,7 @@ const Joi = require("joi");
 const projectSchema = Joi.object({
   title: Joi.string().trim(),
   description: Joi.string().trim(),
-  status: Joi.string().valid('Potential', 'Ongoing', 'Completed'),
+  status: Joi.string().valid('Potential', 'Ongoing', 'Completed','Pause'),
   members: Joi.array().items(Joi.string().hex().length(24)).default([]),
   managerId: Joi.string().hex().length(24),
   tasks: Joi.array().items(Joi.string().hex().length(24)).default([]),
