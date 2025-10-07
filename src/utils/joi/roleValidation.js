@@ -16,7 +16,10 @@ const availablePermissions = [
 const base = {
   name: Joi.string().trim().min(3).max(50),
   permissions: Joi.array().items(
-    Joi.string().valid(...availablePermissions)
+    Joi.object({
+      permission: Joi.string().valid(...availablePermissions).required(),
+      subPermissions: Joi.array().items(Joi.string()).optional()
+    })
   ).min(1)
 };
 

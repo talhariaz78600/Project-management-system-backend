@@ -25,7 +25,7 @@ module.exports = catchAsync(async (req, res, next) => {
 
   const currentUser = await User.findById(decoded?.user?._id)
     .select('+password')
-    .populate('subscription').populate('templateId');
+    .populate('subscription').populate('templateId').populate('roleId');
   if (!currentUser) {
     return next(
       new AppError('The user associated with this token doesnot exist.', 401, {

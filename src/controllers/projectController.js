@@ -64,6 +64,16 @@ const addMembersToProject = catchAsync(async (req, res, next) => {
   });
 });
 
+/////////////////////////
+const getAllProjectNames = catchAsync(async (req, res) => {
+  const projects = await Project.find({}, 'title _id').sort({ title: 1 });
+  return res.status(200).json({
+    status: 'success',
+    results: projects.length,
+    data: projects
+  });
+});
+
 // List projects with pagination & filters
 const getAllProjects = catchAsync(async (req, res) => {
   const { page = 1, limit = 10, sortBy = 'createdAt', sortOrder = 'desc', status, search, managerId, clientId } = req.query;
@@ -75,7 +85,9 @@ const getAllProjects = catchAsync(async (req, res) => {
   if (status) match.status = status;
   if (search) match.title = { $regex: search, $options: 'i' };
   if (managerId) match.managerId = new mongoose.Types.ObjectId(managerId);
-  if (clientId) match.clientId = new mongoose.Types.ObjectId(clientId);
+ if(req?.user?.role === 'subAdmin' && req?.user?.roleId){
+    match._id = { $in: req.user.roleId.projects };
+  }
 
   const pipeline = [
     { $match: match },
@@ -471,6 +483,7 @@ module.exports = {
   updateProject,
   createProject,
   getClientProjects,
-  addMembersToProject
+  addMembersToProject,
+  getAllProjectNames
 
 }

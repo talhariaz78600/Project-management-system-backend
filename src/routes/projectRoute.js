@@ -12,7 +12,8 @@ const {
   updateProject,
   createProject,
   getClientProjects,
-  addMembersToProject
+  addMembersToProject,
+  getAllProjectNames
 } = require('../controllers/projectController');
 
 const { roles } = require('../utils/types');
@@ -32,6 +33,7 @@ router.patch('/task/:id/assign-tasks', restrictTo([roles.ADMIN, roles.SUBADMIN])
 router.patch('/:id/status', restrictTo([roles.ADMIN, roles.SUBADMIN]), updateProjectStatus);
 
 router.get('/', restrictTo([roles.ADMIN, roles.SUBADMIN]), getAllProjects);
+router.get('/names', restrictTo([roles.ADMIN, roles.SUBADMIN]), getAllProjectNames);
 
 router.get('/:id', restrictTo([roles.ADMIN, roles.SUBADMIN]), getProject);
 
